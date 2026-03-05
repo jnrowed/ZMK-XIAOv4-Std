@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(gh api repos/badjeff/zmk-pmw3610-driver/branches --jq '.[].name')",
-      "WebFetch(domain:github.com)"
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)"
     ]
   }
 }
