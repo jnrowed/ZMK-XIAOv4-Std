@@ -33,14 +33,6 @@
         >;
     };
 
-    // ESB split configuration
-    esb_split {
-        compatible = "zmk,esb-split";
-        base-addr-0 = <0xE7 0xE7 0xE7 0xE7>;
-        base-addr-1 = <0xC2 0xC2 0xC2 0xC2>;
-        addr-prefix = <0xE7 0xC2 0xC3 0xC4 0xC5 0xC6 0xC7 0xC8>;
-    };
-
     // Split inputs for receiving trackball data from peripherals
     split_inputs {
         #address-cells = <1>;
