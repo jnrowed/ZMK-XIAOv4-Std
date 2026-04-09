@@ -83,6 +83,8 @@
             label = "DOUBLETAP_JKL_TO_LAYER0";
             #binding-cells = <0>;
             bindings = <&to 3>, <&to 0>;
+
+            tapping-term-ms = <201>;
         };
 
         doubletap_to_layer6: doubletap_to_layer6 {
