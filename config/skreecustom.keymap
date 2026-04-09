@@ -71,7 +71,7 @@
         };
 
         combo_bluetooth {
-            bindings = <&doubletap_tog_layer6>;
+            bindings = <&doubletap_to_layer6>;
             key-positions = <48 49>;
             layers = <0>;
         };
@@ -85,9 +85,9 @@
             bindings = <&to 3>, <&to 0>;
         };
 
-        doubletap_tog_layer6: doubletap_tog_layer6 {
+        doubletap_to_layer6: doubletap_to_layer6 {
             compatible = "zmk,behavior-tap-dance";
-            label = "DOUBLETAP_TOG_LAYER6";
+            label = "DOUBLETAP_TO_LAYER6";
             #binding-cells = <0>;
             bindings = <&none>, <&to 6>;
         };
