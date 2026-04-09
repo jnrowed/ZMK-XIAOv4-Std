@@ -25,13 +25,13 @@ config ZMK_POINTING_SMOOTH_SCROLLING
 config SPI
     default y
 
-config CONFIG_PMW3610_ALT
+config PMW3610_ALT
     default y
 
-config CONFIG_PMW3610_ALT_SWAP_XY
+config PMW3610_ALT_SWAP_XY
     default y
 
-config CONFIG_PMW3610_ALT_REPORT_INTERVAL_MIN
+config PMW3610_ALT_REPORT_INTERVAL_MIN
     default 8
 
 config ZMK_RGB_UNDERGLOW_EXT_POWER
