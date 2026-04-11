@@ -16,24 +16,6 @@ config ZMK_SPLIT
 config ZMK_SLEEP
     default y
 
-config ZMK_POINTING
-    default y
-
-config ZMK_POINTING_SMOOTH_SCROLLING
-    default n
-
-config SPI
-    default y
-
-config PMW3610
-    default y
-
-config PMW3610_SWAP_XY
-    default y
-
-config PMW3610_REPORT_INTERVAL_MIN
-    default 8
-
 config ZMK_RGB_UNDERGLOW_EXT_POWER
     default n
 
