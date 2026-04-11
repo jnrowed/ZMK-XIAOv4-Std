@@ -67,7 +67,7 @@ BT_GATT_SERVICE_DEFINE(lrgb_peripheral_svc,
     BT_GATT_PRIMARY_SERVICE(&lrgb_svc_uuid),
     BT_GATT_CHARACTERISTIC(&lrgb_chr_uuid.uuid,
                            BT_GATT_CHRC_WRITE_WITHOUT_RESP,
-                           BT_GATT_PERM_WRITE,
+                           BT_GATT_PERM_WRITE_ENCRYPT,
                            NULL, on_layer_written, NULL),
 );
 
