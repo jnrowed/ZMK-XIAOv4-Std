@@ -15,6 +15,6 @@ manifest:
       import: app/west.yml
     - name: zmk-pmw3610-driver
       remote: badjeff
-      revision: main                      # ← was zmk-0.3, update for urob compat
+      revision: zmk-0.3                   # ← was zmk-0.3, update for urob compat
   self:
     path: config
