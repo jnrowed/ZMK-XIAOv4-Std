@@ -1,5 +1,12 @@
 /*
  * layer_rgb_central.c — skreecustom left (central) side
+ *
+ * Fixes vs previous version:
+ *  1. Filter on_connected by BLE role: only run discovery when we are the
+ *     BLE central/master (= connection to the split peripheral half).
+ *     Host connections make us the BLE peripheral/slave — skip those.
+ *  2. Use bt_gatt_write_without_response() to match the peripheral's
+ *     WRITE_WITHOUT_RESP characteristic and avoid write_pending deadlock.
  */
 
 #include <zephyr/kernel.h>
@@ -24,7 +31,7 @@ static struct bt_uuid_128 lrgb_chr_uuid = BT_UUID_INIT_128(
     0x67, 0x62, 0x2d, 0x63, 0x68, 0x72, 0x00, 0x00
 );
 
-/* ── forward declaration (required before K_WORK_DELAYABLE_DEFINE) ───────── */
+/* ── forward declaration ─────────────────────────────────────────────────── */
 
 static void lrgb_disc_work_fn(struct k_work *work);
 
@@ -32,13 +39,9 @@ static void lrgb_disc_work_fn(struct k_work *work);
 
 static struct bt_conn              *periph_conn   = NULL;
 static uint16_t                     periph_handle = 0;
-static bool                         write_pending = false;
-static uint8_t                      pending_layer = 0;
+static struct bt_conn              *disc_target_conn = NULL;
 
 static struct bt_gatt_discover_params disc_params;
-static struct bt_gatt_write_params    write_params;
-
-static struct bt_conn *disc_target_conn = NULL;
 static K_WORK_DELAYABLE_DEFINE(lrgb_disc_work, lrgb_disc_work_fn);
 
 /* ── color helper ────────────────────────────────────────────────────────── */
@@ -69,35 +72,18 @@ static void apply_color_local(uint8_t layer)
 
 /* ── GATT write ──────────────────────────────────────────────────────────── */
 
-static void write_cb(struct bt_conn *conn, uint8_t err,
-                     struct bt_gatt_write_params *params)
-{
-    write_pending = false;
-    if (err) {
-        LOG_WRN("layer_rgb: write err %d", err);
-    }
-}
-
 static void send_layer_to_peripheral(uint8_t layer)
 {
     if (!periph_conn || !periph_handle) return;
 
-    if (write_pending) {
-        pending_layer = layer;
-        return;
-    }
-    pending_layer           = layer;
-    write_pending           = true;
-    write_params.handle     = periph_handle;
-    write_params.offset     = 0;
-    write_params.data       = &pending_layer;
-    write_params.length     = sizeof(pending_layer);
-    write_params.func       = write_cb;
+    static uint8_t layer_buf;
+    layer_buf = layer;
 
-    int err = bt_gatt_write(periph_conn, &write_params);
+    int err = bt_gatt_write_without_response(periph_conn, periph_handle,
+                                              &layer_buf, sizeof(layer_buf),
+                                              false);
     if (err) {
-        LOG_WRN("layer_rgb: bt_gatt_write err %d", err);
-        write_pending = false;
+        LOG_WRN("layer_rgb: write_without_response err %d", err);
     }
 }
 
@@ -111,7 +97,9 @@ static uint8_t discover_chr_cb(struct bt_conn *conn,
 
     struct bt_gatt_chrc *chrc = (struct bt_gatt_chrc *)attr->user_data;
     periph_handle = chrc->value_handle;
-    LOG_DBG("layer_rgb: chr handle 0x%04x — syncing current layer", periph_handle);
+    LOG_DBG("layer_rgb: chr handle 0x%04x", periph_handle);
+
+    /* Sync current layer immediately so peripheral isn't stuck on boot color */
     send_layer_to_peripheral(zmk_keymap_highest_layer_active());
     return BT_GATT_ITER_STOP;
 }
@@ -121,7 +109,8 @@ static uint8_t discover_svc_cb(struct bt_conn *conn,
                                 struct bt_gatt_discover_params *params)
 {
     if (!attr) {
-        /* Not found — this is the host connection, not the peripheral */
+        /* Should not happen: we only run discovery on master connections,
+         * which are always the split peripheral — but guard anyway. */
         bt_conn_unref(disc_target_conn);
         disc_target_conn = NULL;
         return BT_GATT_ITER_STOP;
@@ -129,7 +118,7 @@ static uint8_t discover_svc_cb(struct bt_conn *conn,
 
     periph_conn      = disc_target_conn; /* transfer ref ownership */
     disc_target_conn = NULL;
-    LOG_DBG("layer_rgb: peripheral svc found");
+    LOG_DBG("layer_rgb: peripheral svc found, discovering chr");
 
     disc_params.uuid         = &lrgb_chr_uuid.uuid;
     disc_params.func         = discover_chr_cb;
@@ -173,6 +162,16 @@ static void on_connected(struct bt_conn *conn, uint8_t err)
 {
     if (err || periph_conn || disc_target_conn) return;
 
+    /* KEY FIX: only run discovery on connections where we are the BLE master.
+     * BT_CONN_ROLE_CENTRAL = we initiated the connection = split peripheral.
+     * BT_CONN_ROLE_PERIPHERAL = host connected to us = skip entirely. */
+    struct bt_conn_info info;
+    if (bt_conn_get_info(conn, &info) != 0) return;
+    if (info.role != BT_CONN_ROLE_CENTRAL) {
+        LOG_DBG("layer_rgb: skipping slave-role connection (host)");
+        return;
+    }
+
     disc_target_conn = bt_conn_ref(conn);
     k_work_schedule(&lrgb_disc_work, K_SECONDS(3));
 }
@@ -183,7 +182,6 @@ static void on_disconnected(struct bt_conn *conn, uint8_t reason)
         bt_conn_unref(periph_conn);
         periph_conn   = NULL;
         periph_handle = 0;
-        write_pending = false;
         LOG_DBG("layer_rgb: peripheral disconnected (reason %d)", reason);
     }
     if (conn == disc_target_conn) {
