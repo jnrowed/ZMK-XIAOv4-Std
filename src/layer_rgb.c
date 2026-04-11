@@ -1,15 +1,15 @@
 #include <zephyr/kernel.h>
 #include <zmk/events/layer_state_changed.h>
 #include <zmk/rgb_underglow.h>
+#include <zmk/keymap.h>
 #include <zephyr/logging/log.h>
 
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 
 static int layer_rgb_listener(const zmk_event_t *eh) {
-    const struct zmk_layer_state_changed *ev = as_zmk_layer_state_changed(eh);
-    if (!ev || !ev->state) return ZMK_EV_EVENT_BUBBLE;
+    uint8_t layer = zmk_keymap_highest_layer_active();
 
-    switch (ev->layer) {
+    switch (layer) {
         case 1:
             zmk_rgb_underglow_set_hsb((struct zmk_led_hsb){.h = 60,  .s = 100, .b = 50}); // Yellow
             zmk_rgb_underglow_on();
@@ -23,7 +23,7 @@ static int layer_rgb_listener(const zmk_event_t *eh) {
             zmk_rgb_underglow_on();
             break;
         case 4:
-            zmk_rgb_underglow_set_hsb((struct zmk_led_hsb){.h = 0,   .s = 0,   .b = 25}); // Dim white
+            zmk_rgb_underglow_set_hsb((struct zmk_led_hsb){.h = 0,   .s = 0,   .b = 20}); // Dim white
             zmk_rgb_underglow_on();
             break;
         case 5:
