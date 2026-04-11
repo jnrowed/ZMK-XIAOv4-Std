@@ -1,5 +1,4 @@
 #include <zephyr/kernel.h>
-#include <zephyr/init.h>
 #include <zmk/events/layer_state_changed.h>
 #include <zmk/rgb_underglow.h>
 #include <zmk/keymap.h>
@@ -7,12 +6,7 @@
 
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 
-static int layer_rgb_init(void) {
-    zmk_rgb_underglow_off();
-    return 0;
-}
-
-SYS_INIT(layer_rgb_init, APPLICATION, CONFIG_APPLICATION_INIT_PRIORITY);
+#ifdef CONFIG_ZMK_SPLIT_ROLE_CENTRAL
 
 static int layer_rgb_listener(const zmk_event_t *eh) {
     uint8_t layer = zmk_keymap_highest_layer_active();
@@ -48,3 +42,5 @@ static int layer_rgb_listener(const zmk_event_t *eh) {
 
 ZMK_LISTENER(layer_rgb, layer_rgb_listener);
 ZMK_SUBSCRIPTION(layer_rgb, zmk_layer_state_changed);
+
+#endif /* CONFIG_ZMK_SPLIT_ROLE_CENTRAL */
