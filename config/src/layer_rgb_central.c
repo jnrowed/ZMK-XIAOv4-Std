@@ -10,12 +10,10 @@
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 
 static struct bt_uuid_128 lrgb_svc_uuid = BT_UUID_INIT_128(
-    0x73, 0x6b, 0x72, 0x65, 0x65, 0x2d, 0x6c, 0x72,
-    0x67, 0x62, 0x2d, 0x73, 0x76, 0x63, 0x00, 0x00
+    BT_UUID_128_ENCODE(0x6c726762, 0x2d73, 0x7663, 0x2d00, 0x000000000000)
 );
 static struct bt_uuid_128 lrgb_chr_uuid = BT_UUID_INIT_128(
-    0x73, 0x6b, 0x72, 0x65, 0x65, 0x2d, 0x6c, 0x72,
-    0x67, 0x62, 0x2d, 0x63, 0x68, 0x72, 0x00, 0x00
+    BT_UUID_128_ENCODE(0x6c726762, 0x2d63, 0x6872, 0x2d00, 0x000000000000)
 );
 
 static void lrgb_disc_work_fn(struct k_work *work);
@@ -159,7 +157,7 @@ static void on_connected(struct bt_conn *conn, uint8_t err) {
 
     blink_local(0, 100, 80, 1); /* 1 red = central conn, starting discovery */
     disc_target_conn = bt_conn_ref(conn);
-    k_work_schedule(&lrgb_disc_work, K_SECONDS(3));
+    k_work_schedule(&lrgb_disc_work, K_SECONDS(8));
 }
 
 static void on_disconnected(struct bt_conn *conn, uint8_t reason) {
