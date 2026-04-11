@@ -128,6 +128,15 @@ static uint8_t discover_svc_cb(struct bt_conn *conn,
 static void lrgb_disc_work_fn(struct k_work *work) {
     if (!disc_target_conn) return;
 
+    /* Ensure connection is encrypted before discovery */
+    int sec_err = bt_conn_set_security(disc_target_conn, BT_SECURITY_L2);
+    if (sec_err && sec_err != -EALREADY) {
+        blink_local(0, 100, 80, 3); /* 3 red = security setup failed */
+        bt_conn_unref(disc_target_conn);
+        disc_target_conn = NULL;
+        return;
+    }
+
     disc_params.uuid         = &lrgb_svc_uuid.uuid;
     disc_params.func         = discover_svc_cb;
     disc_params.start_handle = BT_ATT_FIRST_ATTRIBUTE_HANDLE;
@@ -139,6 +148,7 @@ static void lrgb_disc_work_fn(struct k_work *work) {
         blink_local(0, 0, 80, 1); /* 1 white = busy, retrying */
         k_work_schedule(&lrgb_disc_work, K_SECONDS(1));
     } else if (err) {
+        blink_local(0, 100, 80, 3); /* 3 red = discovery start failed */
         bt_conn_unref(disc_target_conn);
         disc_target_conn = NULL;
     }
