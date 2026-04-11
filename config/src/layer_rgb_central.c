@@ -1,9 +1,5 @@
 /*
  * layer_rgb_central.c — skreecustom left (central) side
- *
- * Fix: GATT discovery is delayed via k_work_delayable to avoid colliding
- * with ZMK's own split GATT setup which runs immediately on connection.
- * If bt_gatt_discover() returns -EBUSY we reschedule and retry.
  */
 
 #include <zephyr/kernel.h>
@@ -28,6 +24,10 @@ static struct bt_uuid_128 lrgb_chr_uuid = BT_UUID_INIT_128(
     0x67, 0x62, 0x2d, 0x63, 0x68, 0x72, 0x00, 0x00
 );
 
+/* ── forward declaration (required before K_WORK_DELAYABLE_DEFINE) ───────── */
+
+static void lrgb_disc_work_fn(struct k_work *work);
+
 /* ── state ───────────────────────────────────────────────────────────────── */
 
 static struct bt_conn              *periph_conn   = NULL;
@@ -38,32 +38,31 @@ static uint8_t                      pending_layer = 0;
 static struct bt_gatt_discover_params disc_params;
 static struct bt_gatt_write_params    write_params;
 
-/* Work item for delayed / retried GATT discovery */
-static struct k_work_delayable lrgb_disc_work;
-static struct bt_conn         *disc_target_conn = NULL; /* conn under discovery */
+static struct bt_conn *disc_target_conn = NULL;
+static K_WORK_DELAYABLE_DEFINE(lrgb_disc_work, lrgb_disc_work_fn);
 
 /* ── color helper ────────────────────────────────────────────────────────── */
 
 static void apply_color_local(uint8_t layer)
 {
     switch (layer) {
-        case 1:
+        case 1: /* Functions — yellow */
             zmk_rgb_underglow_set_hsb((struct zmk_led_hsb){.h = 60,  .s = 100, .b = 50});
             zmk_rgb_underglow_on();  break;
-        case 2:
+        case 2: /* Arrows — green */
             zmk_rgb_underglow_set_hsb((struct zmk_led_hsb){.h = 120, .s = 100, .b = 50});
             zmk_rgb_underglow_on();  break;
-        case 3:
+        case 3: /* Numpads — blue */
             zmk_rgb_underglow_set_hsb((struct zmk_led_hsb){.h = 240, .s = 100, .b = 50});
             zmk_rgb_underglow_on();  break;
-        case 4:
+        case 4: /* Symbols — white dim */
             zmk_rgb_underglow_set_hsb((struct zmk_led_hsb){.h = 0,   .s = 0,   .b = 25});
             zmk_rgb_underglow_on();  break;
-        case 5:
-        case 6:
+        case 5: /* donotpress — red */
+        case 6: /* bluetooth  — red */
             zmk_rgb_underglow_set_hsb((struct zmk_led_hsb){.h = 0,   .s = 100, .b = 50});
             zmk_rgb_underglow_on();  break;
-        default:
+        default: /* layer 0 — off */
             zmk_rgb_underglow_off(); break;
     }
 }
@@ -122,13 +121,13 @@ static uint8_t discover_svc_cb(struct bt_conn *conn,
                                 struct bt_gatt_discover_params *params)
 {
     if (!attr) {
-        /* Not the peripheral — host connection. Release the ref we took. */
+        /* Not found — this is the host connection, not the peripheral */
         bt_conn_unref(disc_target_conn);
         disc_target_conn = NULL;
         return BT_GATT_ITER_STOP;
     }
 
-    periph_conn      = disc_target_conn; /* transfer ownership of the ref */
+    periph_conn      = disc_target_conn; /* transfer ref ownership */
     disc_target_conn = NULL;
     LOG_DBG("layer_rgb: peripheral svc found");
 
@@ -147,7 +146,7 @@ static uint8_t discover_svc_cb(struct bt_conn *conn,
 
 static void lrgb_disc_work_fn(struct k_work *work)
 {
-    if (!disc_target_conn) return; /* connection was dropped before we ran */
+    if (!disc_target_conn) return;
 
     disc_params.uuid         = &lrgb_svc_uuid.uuid;
     disc_params.func         = discover_svc_cb;
@@ -157,7 +156,6 @@ static void lrgb_disc_work_fn(struct k_work *work)
 
     int err = bt_gatt_discover(disc_target_conn, &disc_params);
     if (err == -EBUSY) {
-        /* ZMK's split GATT setup still in progress — retry in 1 s */
         LOG_DBG("layer_rgb: GATT busy, retrying in 1s");
         k_work_schedule(&lrgb_disc_work, K_SECONDS(1));
         return;
@@ -167,23 +165,15 @@ static void lrgb_disc_work_fn(struct k_work *work)
         bt_conn_unref(disc_target_conn);
         disc_target_conn = NULL;
     }
-    /* on success, disc_target_conn ownership passes to discover_svc_cb */
 }
 
 /* ── BLE connection tracking ─────────────────────────────────────────────── */
 
 static void on_connected(struct bt_conn *conn, uint8_t err)
 {
-    if (err || periph_conn || disc_target_conn) {
-        return; /* failed, or already tracking a connection */
-    }
+    if (err || periph_conn || disc_target_conn) return;
 
-    /* Hold a ref across the async discovery.
-     * Released in discover_svc_cb (either on miss or on success). */
     disc_target_conn = bt_conn_ref(conn);
-
-    /* Delay 3 s to let ZMK's own split GATT discovery finish first.
-     * The work fn retries automatically if it's still busy. */
     k_work_schedule(&lrgb_disc_work, K_SECONDS(3));
 }
 
@@ -197,7 +187,6 @@ static void on_disconnected(struct bt_conn *conn, uint8_t reason)
         LOG_DBG("layer_rgb: peripheral disconnected (reason %d)", reason);
     }
     if (conn == disc_target_conn) {
-        /* Dropped before discovery completed */
         k_work_cancel_delayable(&lrgb_disc_work);
         bt_conn_unref(disc_target_conn);
         disc_target_conn = NULL;
@@ -208,15 +197,6 @@ BT_CONN_CB_DEFINE(lrgb_conn_cb) = {
     .connected    = on_connected,
     .disconnected = on_disconnected,
 };
-
-/* ── init (register work item) ───────────────────────────────────────────── */
-
-static int lrgb_init(void)
-{
-    k_work_init_delayable(&lrgb_disc_work, lrgb_disc_work_fn);
-    return 0;
-}
-SYS_INIT(lrgb_init, APPLICATION, CONFIG_APPLICATION_INIT_PRIORITY);
 
 /* ── ZMK layer listener ──────────────────────────────────────────────────── */
 
