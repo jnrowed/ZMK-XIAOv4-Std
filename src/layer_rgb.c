@@ -23,7 +23,7 @@ static int layer_rgb_listener(const zmk_event_t *eh) {
             zmk_rgb_underglow_on();
             break;
         case 4:
-            zmk_rgb_underglow_set_hsb((struct zmk_led_hsb){.h = 0,   .s = 0,   .b = 50}); // Dim white
+            zmk_rgb_underglow_set_hsb((struct zmk_led_hsb){.h = 0,   .s = 0,   .b = 25}); // Dim white
             zmk_rgb_underglow_on();
             break;
         case 5:
