@@ -28,23 +28,23 @@ static int layer_rgb_listener(const zmk_event_t *eh) {
 
     switch (layer) {
         case 1:
-            invoke_rgb(RGB_COLOR_HSB_CMD, RGB_COLOR_HSB(60,  100, 50)); // Yellow
+            invoke_rgb(RGB_COLOR_HSB_CMD, RGB_COLOR_HSB_VAL(60,  100, 50)); // Yellow
             break;
         case 2:
-            invoke_rgb(RGB_COLOR_HSB_CMD, RGB_COLOR_HSB(120, 100, 50)); // Green
+            invoke_rgb(RGB_COLOR_HSB_CMD, RGB_COLOR_HSB_VAL(120, 100, 50)); // Green
             break;
         case 3:
-            invoke_rgb(RGB_COLOR_HSB_CMD, RGB_COLOR_HSB(240, 100, 50)); // Blue
+            invoke_rgb(RGB_COLOR_HSB_CMD, RGB_COLOR_HSB_VAL(240, 100, 50)); // Blue
             break;
         case 4:
-            invoke_rgb(RGB_COLOR_HSB_CMD, RGB_COLOR_HSB(0,   0,   25)); // Dim white
+            invoke_rgb(RGB_COLOR_HSB_CMD, RGB_COLOR_HSB_VAL(0,   0,   25)); // Dim white
             break;
         case 5:
         case 6:
-            invoke_rgb(RGB_COLOR_HSB_CMD, RGB_COLOR_HSB(0,   100, 50)); // Red
+            invoke_rgb(RGB_COLOR_HSB_CMD, RGB_COLOR_HSB_VAL(0,   100, 50)); // Red
             break;
         default:
-            invoke_rgb(RGB_TOG_CMD, 0); // Layer 0 = off
+            invoke_rgb(RGB_OFF, 0); // Layer 0 = off
             break;
     }
     return ZMK_EV_EVENT_BUBBLE;
