@@ -6,6 +6,7 @@
 #include <zmk/rgb_underglow.h>
 #include <zmk/keymap.h>
 #include <zephyr/logging/log.h>
+#include "layer_rgb_uuid.h"
 
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 
@@ -17,8 +18,6 @@ static struct bt_conn               *disc_target_conn = NULL;
 static struct bt_gatt_discover_params disc_params;
 static K_WORK_DELAYABLE_DEFINE(lrgb_disc_work, lrgb_disc_work_fn);
 static uint8_t                       disc_attempts    = 0;
-static uint16_t                      last_svc_start   = 0;
-static uint16_t                      last_svc_end     = 0;
 
 static void apply_color_local(uint8_t layer) {
     switch (layer) {
@@ -75,31 +74,21 @@ static uint8_t discover_svc_cb(struct bt_conn *conn,
                                 const struct bt_gatt_attr *attr,
                                 struct bt_gatt_discover_params *params) {
     if (!attr) {
-        /* All services iterated — now discover chr within last service only */
-        if (last_svc_start == 0) {
-            k_work_schedule(&lrgb_disc_work, K_SECONDS(2));
-            return BT_GATT_ITER_STOP;
-        }
-
-        periph_conn      = disc_target_conn;
-        disc_target_conn = NULL;
-
-        disc_params.uuid         = NULL;
-        disc_params.func         = discover_chr_cb;
-        disc_params.start_handle = last_svc_start;
-        disc_params.end_handle   = last_svc_end;
-        disc_params.type         = BT_GATT_DISCOVER_CHARACTERISTIC;
-
-        bt_gatt_discover(periph_conn, &disc_params);
+        k_work_schedule(&lrgb_disc_work, K_SECONDS(2));
         return BT_GATT_ITER_STOP;
     }
 
-    /* Track every service — last one will be ours */
-    struct bt_gatt_service_val *svc =
-        (struct bt_gatt_service_val *)attr->user_data;
-    last_svc_start = attr->handle;
-    last_svc_end   = svc->end_handle;
-    return BT_GATT_ITER_CONTINUE;
+    periph_conn      = disc_target_conn;
+    disc_target_conn = NULL;
+
+    disc_params.uuid         = LRGB_CHR_UUID;
+    disc_params.func         = discover_chr_cb;
+    disc_params.start_handle = attr->handle + 1;
+    disc_params.end_handle   = 0xffff;
+    disc_params.type         = BT_GATT_DISCOVER_CHARACTERISTIC;
+
+    bt_gatt_discover(periph_conn, &disc_params);
+    return BT_GATT_ITER_STOP;
 }
 
 static void lrgb_disc_work_fn(struct k_work *work) {
@@ -116,10 +105,8 @@ static void lrgb_disc_work_fn(struct k_work *work) {
     }
 
     disc_attempts++;
-    last_svc_start = 0;
-    last_svc_end   = 0;
 
-    disc_params.uuid         = NULL;
+    disc_params.uuid         = LRGB_SVC_UUID;
     disc_params.func         = discover_svc_cb;
     disc_params.start_handle = BT_ATT_FIRST_ATTRIBUTE_HANDLE;
     disc_params.end_handle   = BT_ATT_LAST_ATTRIBUTE_HANDLE;
