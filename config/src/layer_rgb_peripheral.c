@@ -5,21 +5,9 @@
 #include <zmk/event_manager.h>
 #include <zmk/events/split_peripheral_status_changed.h>
 #include <zephyr/logging/log.h>
+#include "layer_rgb_uuid.h"
 
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
-
-static struct bt_uuid_128 lrgb_svc_uuid = {
-    .uuid = { BT_UUID_TYPE_128 },
-    .val = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-             0x00, 0x2d, 0x63, 0x76, 0x73, 0x2d,
-             0x62, 0x67, 0x72, 0x6c }
-};
-static struct bt_uuid_128 lrgb_chr_uuid = {
-    .uuid = { BT_UUID_TYPE_128 },
-    .val = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-             0x00, 0x2d, 0x72, 0x68, 0x63, 0x2d,
-             0x62, 0x67, 0x72, 0x6c }
-};
 
 static void apply_color(uint8_t layer) {
     switch (layer) {
@@ -56,8 +44,8 @@ static ssize_t on_layer_written(struct bt_conn *conn,
 }
 
 BT_GATT_SERVICE_DEFINE(lrgb_peripheral_svc,
-    BT_GATT_PRIMARY_SERVICE(&lrgb_svc_uuid),
-    BT_GATT_CHARACTERISTIC(&lrgb_chr_uuid.uuid,
+    BT_GATT_PRIMARY_SERVICE(LRGB_SVC_UUID),
+    BT_GATT_CHARACTERISTIC(LRGB_CHR_UUID,
                            BT_GATT_CHRC_WRITE_WITHOUT_RESP,
                            BT_GATT_PERM_WRITE,
                            NULL, on_layer_written, NULL),
