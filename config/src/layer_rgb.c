@@ -1,52 +1,40 @@
 #include <zephyr/kernel.h>
 #include <zmk/events/layer_state_changed.h>
-#include <zmk/behavior.h>
+#include <zmk/rgb_underglow.h>
 #include <zmk/keymap.h>
-#include <dt-bindings/zmk/rgb.h>
 #include <zephyr/logging/log.h>
 
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 
 #ifdef CONFIG_ZMK_SPLIT_ROLE_CENTRAL
 
-static void invoke_rgb(uint32_t cmd, uint32_t color) {
-    struct zmk_behavior_binding binding = {
-        .behavior_dev = "RGB_UG",
-        .param1 = cmd,
-        .param2 = color,
-    };
-    struct zmk_behavior_binding_event event = {
-        .position = 0,
-        .timestamp = k_uptime_get(),
-    };
-    zmk_behavior_invoke_binding(&binding, event, true);
-}
-
 static int layer_rgb_listener(const zmk_event_t *eh) {
-    const struct zmk_layer_state_changed *ev = as_zmk_layer_state_changed(eh);
-    if (!ev) return ZMK_EV_EVENT_BUBBLE;
-
     uint8_t layer = zmk_keymap_highest_layer_active();
 
     switch (layer) {
         case 1:
-            invoke_rgb(RGB_COLOR_HSB_CMD, RGB_COLOR_HSB_VAL(60,  100, 50)); // Yellow
+            zmk_rgb_underglow_set_hsb((struct zmk_led_hsb){.h = 60,  .s = 100, .b = 50});
+            zmk_rgb_underglow_on();
             break;
         case 2:
-            invoke_rgb(RGB_COLOR_HSB_CMD, RGB_COLOR_HSB_VAL(120, 100, 50)); // Green
+            zmk_rgb_underglow_set_hsb((struct zmk_led_hsb){.h = 120, .s = 100, .b = 50});
+            zmk_rgb_underglow_on();
             break;
         case 3:
-            invoke_rgb(RGB_COLOR_HSB_CMD, RGB_COLOR_HSB_VAL(240, 100, 50)); // Blue
+            zmk_rgb_underglow_set_hsb((struct zmk_led_hsb){.h = 240, .s = 100, .b = 50});
+            zmk_rgb_underglow_on();
             break;
         case 4:
-            invoke_rgb(RGB_COLOR_HSB_CMD, RGB_COLOR_HSB_VAL(0,   0,   20)); // Dim white
+            zmk_rgb_underglow_set_hsb((struct zmk_led_hsb){.h = 0,   .s = 0,   .b = 25});
+            zmk_rgb_underglow_on();
             break;
         case 5:
         case 6:
-            invoke_rgb(RGB_COLOR_HSB_CMD, RGB_COLOR_HSB_VAL(0,   100, 50)); // Red
+            zmk_rgb_underglow_set_hsb((struct zmk_led_hsb){.h = 0,   .s = 100, .b = 50});
+            zmk_rgb_underglow_on();
             break;
         default:
-            invoke_rgb(RGB_OFF_CMD, 0); // Layer 0 = off
+            zmk_rgb_underglow_off();
             break;
     }
     return ZMK_EV_EVENT_BUBBLE;
