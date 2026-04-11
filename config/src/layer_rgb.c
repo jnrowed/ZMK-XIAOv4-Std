@@ -1,15 +1,20 @@
 #include <zephyr/kernel.h>
 #include <zmk/events/layer_state_changed.h>
 #include <zmk/rgb_underglow.h>
-#include <zmk/keymap.h>
 #include <zephyr/logging/log.h>
 
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 
-#ifdef CONFIG_ZMK_SPLIT_ROLE_CENTRAL
+static uint32_t active_layers = 0;
 
-static int layer_rgb_listener(const zmk_event_t *eh) {
-    uint8_t layer = zmk_keymap_highest_layer_active();
+static void update_rgb(void) {
+    uint8_t layer = 0;
+    for (int i = 31; i >= 0; i--) {
+        if (active_layers & BIT(i)) {
+            layer = i;
+            break;
+        }
+    }
 
     switch (layer) {
         case 1:
@@ -37,10 +42,21 @@ static int layer_rgb_listener(const zmk_event_t *eh) {
             zmk_rgb_underglow_off();
             break;
     }
+}
+
+static int layer_rgb_listener(const zmk_event_t *eh) {
+    const struct zmk_layer_state_changed *ev = as_zmk_layer_state_changed(eh);
+    if (!ev) return ZMK_EV_EVENT_BUBBLE;
+
+    if (ev->state) {
+        active_layers |= BIT(ev->layer);
+    } else {
+        active_layers &= ~BIT(ev->layer);
+    }
+
+    update_rgb();
     return ZMK_EV_EVENT_BUBBLE;
 }
 
 ZMK_LISTENER(layer_rgb, layer_rgb_listener);
 ZMK_SUBSCRIPTION(layer_rgb, zmk_layer_state_changed);
-
-#endif /* CONFIG_ZMK_SPLIT_ROLE_CENTRAL */
