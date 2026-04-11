@@ -107,6 +107,7 @@ static uint8_t discover_svc_cb(struct bt_conn *conn,
                                 const struct bt_gatt_attr *attr,
                                 struct bt_gatt_discover_params *params) {
     if (!attr) {
+        blink_local(300, 100, 80, 3); /* 3 magenta = discovery ran but svc not found */
         bt_conn_unref(disc_target_conn);
         disc_target_conn = NULL;
         return BT_GATT_ITER_STOP;
