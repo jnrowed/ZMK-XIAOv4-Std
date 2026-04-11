@@ -44,7 +44,7 @@ static int layer_rgb_listener(const zmk_event_t *eh) {
             invoke_rgb(RGB_COLOR_HSB_CMD, RGB_COLOR_HSB_VAL(0,   100, 50)); // Red
             break;
         default:
-            invoke_rgb(RGB_OFF, 0); // Layer 0 = off
+            invoke_rgb(RGB_OFF_CMD, 0); // Layer 0 = off
             break;
     }
     return ZMK_EV_EVENT_BUBBLE;
