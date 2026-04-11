@@ -59,4 +59,6 @@ static int layer_rgb_listener(const zmk_event_t *eh) {
 }
 
 ZMK_LISTENER(layer_rgb, layer_rgb_listener);
-ZMK_EVENT_SUBSCRIBE(layer_rgb, zmk_layer_state_changed);
+#ifdef CONFIG_ZMK_SPLIT_ROLE_CENTRAL
+ZMK_SUBSCRIPTION(layer_rgb, zmk_layer_state_changed);
+#endif
