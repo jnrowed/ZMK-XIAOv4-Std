@@ -24,12 +24,12 @@ static struct bt_uuid_128 lrgb_chr_uuid = {
 
 static void lrgb_disc_work_fn(struct k_work *work);
 
-static struct bt_conn              *periph_conn      = NULL;
-static uint16_t                     periph_handle    = 0;
-static struct bt_conn              *disc_target_conn = NULL;
-static uint16_t                     last_svc_handle  = 0;
+static struct bt_conn               *periph_conn      = NULL;
+static uint16_t                      periph_handle    = 0;
+static struct bt_conn               *disc_target_conn = NULL;
 static struct bt_gatt_discover_params disc_params;
 static K_WORK_DELAYABLE_DEFINE(lrgb_disc_work, lrgb_disc_work_fn);
+static uint8_t                       disc_attempts    = 0;
 
 static void apply_color_local(uint8_t layer) {
     switch (layer) {
@@ -73,57 +73,53 @@ static void send_layer_to_peripheral(uint8_t layer) {
 static uint8_t discover_chr_cb(struct bt_conn *conn,
                                 const struct bt_gatt_attr *attr,
                                 struct bt_gatt_discover_params *params) {
-    if (!attr) return BT_GATT_ITER_STOP;
-
+    if (!attr) {
+        send_layer_to_peripheral(zmk_keymap_highest_layer_active());
+        return BT_GATT_ITER_STOP;
+    }
     struct bt_gatt_chrc *chrc = (struct bt_gatt_chrc *)attr->user_data;
     periph_handle = chrc->value_handle;
-    return BT_GATT_ITER_CONTINUE;
+    return BT_GATT_ITER_STOP;
 }
 
 static uint8_t discover_svc_cb(struct bt_conn *conn,
                                 const struct bt_gatt_attr *attr,
                                 struct bt_gatt_discover_params *params) {
     if (!attr) {
-        if (last_svc_handle == 0) {
-            k_work_schedule(&lrgb_disc_work, K_SECONDS(2));
-            return BT_GATT_ITER_STOP;
-        }
-        periph_conn      = disc_target_conn;
-        disc_target_conn = NULL;
-
-        disc_params.uuid         = NULL;
-        disc_params.func         = discover_chr_cb;
-        disc_params.start_handle = last_svc_handle;
-        disc_params.end_handle   = 0xffff;
-        disc_params.type         = BT_GATT_DISCOVER_CHARACTERISTIC;
-
-        bt_gatt_discover(periph_conn, &disc_params);
+        /* Service not found this attempt — retry */
+        k_work_schedule(&lrgb_disc_work, K_SECONDS(2));
         return BT_GATT_ITER_STOP;
     }
 
-    last_svc_handle = attr->handle;
-    return BT_GATT_ITER_CONTINUE;
+    periph_conn      = disc_target_conn;
+    disc_target_conn = NULL;
+
+    disc_params.uuid         = &lrgb_chr_uuid.uuid;
+    disc_params.func         = discover_chr_cb;
+    disc_params.start_handle = attr->handle + 1;
+    disc_params.end_handle   = 0xffff;
+    disc_params.type         = BT_GATT_DISCOVER_CHARACTERISTIC;
+
+    bt_gatt_discover(periph_conn, &disc_params);
+    return BT_GATT_ITER_STOP;
 }
 
 static void lrgb_disc_work_fn(struct k_work *work) {
-    static uint8_t attempts = 0;
-
     if (!disc_target_conn) {
-        attempts = 0;
+        disc_attempts = 0;
         return;
     }
 
-    if (attempts >= 15) {
-        attempts = 0;
+    if (disc_attempts >= 15) {
+        disc_attempts = 0;
         bt_conn_unref(disc_target_conn);
         disc_target_conn = NULL;
         return;
     }
 
-    attempts++;
-    last_svc_handle = 0;
+    disc_attempts++;
 
-    disc_params.uuid         = NULL;
+    disc_params.uuid         = &lrgb_svc_uuid.uuid;
     disc_params.func         = discover_svc_cb;
     disc_params.start_handle = BT_ATT_FIRST_ATTRIBUTE_HANDLE;
     disc_params.end_handle   = BT_ATT_LAST_ATTRIBUTE_HANDLE;
@@ -142,6 +138,7 @@ static void on_connected(struct bt_conn *conn, uint8_t err) {
     if (bt_conn_get_info(conn, &info) != 0) return;
     if (info.role != BT_CONN_ROLE_CENTRAL) return;
 
+    disc_attempts    = 0;
     disc_target_conn = bt_conn_ref(conn);
     k_work_schedule(&lrgb_disc_work, K_SECONDS(1));
 }
