@@ -16,7 +16,7 @@
 
         to_layer0 {
             bindings = <&doubletap_to_layer0>;
-            key-positions = <31 32>;
+            key-positions = <32 33>;
             layers = <0 1 2 3 4 5 6>;
             timeout-ms = <100>;
             require-prior-idle-ms = <150>;
