@@ -22,13 +22,13 @@
             require-prior-idle-ms = <150>;
         };
 
-        mo_layer2 {
+        to_layer2 {
             bindings = <&to 2>;
             key-positions = <43 44 45>;
             layers = <0 2 3 4>;
         };
 
-        mo_layer3 {
+        to_layer3 {
             bindings = <&to 3>;
             key-positions = <31 32 33>;
             layers = <0 2 3 4>;
