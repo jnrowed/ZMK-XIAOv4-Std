@@ -30,7 +30,7 @@ static void update_rgb(void) {
             zmk_rgb_underglow_on();
             break;
         case 4:
-            zmk_rgb_underglow_set_hsb((struct zmk_led_hsb){.h = 0,   .s = 0,   .b = 20});
+            zmk_rgb_underglow_set_hsb((struct zmk_led_hsb){.h = 0,   .s = 0,   .b = 25});
             zmk_rgb_underglow_on();
             break;
         case 5:
@@ -48,13 +48,37 @@ static int layer_rgb_listener(const zmk_event_t *eh) {
     struct zmk_layer_state_changed *ev = (struct zmk_layer_state_changed *)eh->event;
     if (!ev) return ZMK_EV_EVENT_BUBBLE;
 
-    if (ev->state) {
-        active_layers |= BIT(ev->layer);
-    } else {
-        active_layers &= ~BIT(ev->layer);
+    if (!ev->state) {
+        zmk_rgb_underglow_off();
+        return ZMK_EV_EVENT_BUBBLE;
     }
 
-    update_rgb();
+    switch (ev->layer) {
+        case 1:
+            zmk_rgb_underglow_set_hsb((struct zmk_led_hsb){.h = 60,  .s = 100, .b = 50});
+            zmk_rgb_underglow_on();
+            break;
+        case 2:
+            zmk_rgb_underglow_set_hsb((struct zmk_led_hsb){.h = 120, .s = 100, .b = 50});
+            zmk_rgb_underglow_on();
+            break;
+        case 3:
+            zmk_rgb_underglow_set_hsb((struct zmk_led_hsb){.h = 240, .s = 100, .b = 50});
+            zmk_rgb_underglow_on();
+            break;
+        case 4:
+            zmk_rgb_underglow_set_hsb((struct zmk_led_hsb){.h = 0,   .s = 0,   .b = 25});
+            zmk_rgb_underglow_on();
+            break;
+        case 5:
+        case 6:
+            zmk_rgb_underglow_set_hsb((struct zmk_led_hsb){.h = 0,   .s = 100, .b = 50});
+            zmk_rgb_underglow_on();
+            break;
+        default:
+            zmk_rgb_underglow_off();
+            break;
+    }
     return ZMK_EV_EVENT_BUBBLE;
 }
 
