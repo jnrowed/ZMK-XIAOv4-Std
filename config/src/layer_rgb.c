@@ -7,6 +7,8 @@
 
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 
+#ifdef CONFIG_ZMK_SPLIT_ROLE_CENTRAL
+
 static void invoke_rgb(uint32_t cmd, uint32_t color) {
     struct zmk_behavior_binding binding = {
         .behavior_dev = "RGB_UG",
@@ -37,7 +39,7 @@ static int layer_rgb_listener(const zmk_event_t *eh) {
             invoke_rgb(RGB_COLOR_HSB_CMD, RGB_COLOR_HSB_VAL(240, 100, 50)); // Blue
             break;
         case 4:
-            invoke_rgb(RGB_COLOR_HSB_CMD, RGB_COLOR_HSB_VAL(0,   0,   25)); // Dim white
+            invoke_rgb(RGB_COLOR_HSB_CMD, RGB_COLOR_HSB_VAL(0,   0,   20)); // Dim white
             break;
         case 5:
         case 6:
@@ -52,3 +54,5 @@ static int layer_rgb_listener(const zmk_event_t *eh) {
 
 ZMK_LISTENER(layer_rgb, layer_rgb_listener);
 ZMK_SUBSCRIPTION(layer_rgb, zmk_layer_state_changed);
+
+#endif /* CONFIG_ZMK_SPLIT_ROLE_CENTRAL */
