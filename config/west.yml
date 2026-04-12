@@ -4,19 +4,22 @@ manifest:
       url-base: https://github.com/zmkfirmware
     # Additional modules containing boards/shields/custom code can be listed here as well
     # See https://docs.zephyrproject.org/3.2.0/develop/west/manifest.html#projects
-    - name: badjeff
-      url-base: https://github.com/badjeff
-    - name: Cyboard-DigitalTailor
-      url-base: https://github.com/Cyboard-DigitalTailor
+    - name: awkannan
+      url-base: https://github.com/awkannan
+#   - name: badjeff
+#     url-base: https://github.com/badjeff
+#   - name: Cyboard-DigitalTailor
+#     url-base: https://github.com/Cyboard-DigitalTailor
   projects:
     - name: zmk
-      remote: zmkfirmware
-      revision: v0.3
+      remote: awkannan
+      revision: develop
       import: app/west.yml
-    - name: zmk-pmw3610-driver
-      remote: badjeff
-      revision: zmk-0.3
-#     remote: Cyboard-DigitalTailor
-#     revision: startup_optimization
+    - name: zmk-smart-rgbled-widget
+      remote: awkannan
+      revision: main
+#   - name: zmk-pmw3610-driver
+#     remote: badjeff
+#     revision: zmk-0.3
   self:
     path: config
